@@ -3,14 +3,24 @@ package com.jldubz.gistaviewer.viewmodel;
 import android.view.View;
 
 import com.jldubz.gistaviewer.model.Constants;
+import com.jldubz.gistaviewer.model.NetworkUtil;
+import com.jldubz.gistaviewer.model.data.IGitHubService;
 import com.jldubz.gistaviewer.model.gists.Gist;
 import com.jldubz.gistaviewer.model.GitHubUser;
 
+import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * ViewModel that handles business logic for Gist fragments DiscoverGistsFragment, StarGistsFragment, and YourGistsFragment and
@@ -46,6 +56,8 @@ public class MainViewModel extends ViewModel {
     private boolean mMoreStarredGistsAvailable = true;
     private boolean mIsLoggedIn;
 
+    private IGitHubService mGitHubService;
+
     public MainViewModel() {
         super();
         init();
@@ -75,8 +87,9 @@ public class MainViewModel extends ViewModel {
      * Configure a new Retrofit instance for future API calls with no authorization
      */
     private void initAnonService() {
+        Retrofit retrofit = new Retrofit.Builder().baseUrl(Constants.URL_GITHUB).addConverterFactory(GsonConverterFactory.create()).build();
 
-
+        mGitHubService = retrofit.create(IGitHubService.class);
     }
 
     //region Profile
@@ -118,7 +131,29 @@ public class MainViewModel extends ViewModel {
             return;
         }
 
+        byte[] authBytes = (username + ":" + token).getBytes();
+        String auth = android.util.Base64.encodeToString(authBytes, android.util.Base64.NO_WRAP);
+        mGitHubService.getLoggedInUser(auth).enqueue(new Callback<GitHubUser>() {
+            @Override
+            public void onResponse(Call<GitHubUser> call, Response<GitHubUser> response) {
+                if (!response.isSuccessful()) {
+                    showError(NetworkUtil.onGitHubResponseError(response));
+                    return;
+                }
 
+                mUser.postValue(response.body());
+                showProfile();
+                saveCredentials(username, token);
+
+                loadMoreYourGists();
+                loadMoreStarredGists();
+            }
+
+            @Override
+            public void onFailure(Call<GitHubUser> call, Throwable t) {
+                showError(t.getLocalizedMessage());
+            }
+        });
     }
 
     /***
@@ -165,8 +200,32 @@ public class MainViewModel extends ViewModel {
      * Download public Gists that have been recently created or updated on GitHub
      */
     public void discoverMoreGists() {
+        mGitHubService.getPublicGists(mGistPagesLoaded+1).enqueue(new Callback<List<Gist>>() {
+            @Override
+            public void onResponse(Call<List<Gist>> call, Response<List<Gist>> response) {
+                if (!response.isSuccessful()) {
+                    showError(NetworkUtil.onGitHubResponseError(response));
+                    return;
+                }
+                mGistPagesLoaded++;
+                mMoreDiscoveredGistsAvailable = isNextLinkAvailable(response);
 
+                List<Gist> currentList = mDiscoveredGists.getValue();
+                if (currentList == null) {
+                    currentList = new ArrayList<>();
+                }
 
+                if (response.body() != null) {
+                    currentList.addAll(response.body());
+                }
+                mDiscoveredGists.postValue(response.body());
+            }
+
+            @Override
+            public void onFailure(Call<List<Gist>> call, Throwable t) {
+                showError(t.getLocalizedMessage());
+            }
+        });
     }
 
     public LiveData<List<Gist>> getDiscoveredGists() {
@@ -189,7 +248,33 @@ public class MainViewModel extends ViewModel {
      * Download Gists starred by the authorized user GitHub
      */
     public void loadMoreStarredGists() {
+        mGitHubService.getStarredGists(mStarredGistsPagesLoaded).enqueue(new Callback<List<Gist>>() {
+            @Override
+            public void onResponse(Call<List<Gist>> call, Response<List<Gist>> response) {
+                if (!response.isSuccessful()) {
+                    showError(NetworkUtil.onGitHubResponseError(response));
+                    return;
+                }
 
+                mStarredGistsPagesLoaded++;
+                mMoreStarredGistsAvailable = isNextLinkAvailable(response);
+
+                List<Gist> currentList = mStarredGists.getValue();
+                if (currentList == null) {
+                    currentList = new ArrayList<>();
+                }
+
+                if (response.body() != null) {
+                    currentList.addAll(response.body());
+                }
+                mStarredGists.postValue(response.body());
+            }
+
+            @Override
+            public void onFailure(Call<List<Gist>> call, Throwable t) {
+                showError(t.getLocalizedMessage());
+            }
+        });
 
     }
 
@@ -219,6 +304,33 @@ public class MainViewModel extends ViewModel {
             return;
         }
 
+        mGitHubService.getYourGists(mYourGistsPagesLoaded).enqueue(new Callback<List<Gist>>() {
+            @Override
+            public void onResponse(Call<List<Gist>> call, Response<List<Gist>> response) {
+                if (!response.isSuccessful()) {
+                    showError(NetworkUtil.onGitHubResponseError(response));
+                    return;
+                }
+
+                mYourGistsPagesLoaded++;
+                mMoreYourGistsAvailable = isNextLinkAvailable(response);
+
+                List<Gist> currentList = mYourGists.getValue();
+                if (currentList == null) {
+                    currentList = new ArrayList<>();
+                }
+
+                if (response.body() != null) {
+                    currentList.addAll(response.body());
+                }
+                mYourGists.postValue(response.body());
+            }
+
+            @Override
+            public void onFailure(Call<List<Gist>> call, Throwable t) {
+                showError(t.getLocalizedMessage());
+            }
+        });
 
     }
 
