@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Response;
 import retrofit2.http.Body;
@@ -18,8 +19,10 @@ import retrofit2.http.GET;
 import retrofit2.http.HEAD;
 import retrofit2.http.Header;
 import retrofit2.http.Headers;
+import retrofit2.http.Multipart;
 import retrofit2.http.POST;
 import retrofit2.http.PUT;
+import retrofit2.http.Part;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
 import retrofit2.http.QueryMap;
@@ -72,5 +75,8 @@ public interface IGitHubService {
     @POST("/gists/{gistId}/comments")
     Call<GistComment> createCommentOnGistUrlEncode(@Path("gistId") String gistId, @Field("body") String body);
 
-
+    // upload Picture to githubuser
+    @Multipart
+    @POST("/user/pictures")
+    Call<GitHubUser> uploadPictureToUser(@Part("picture") RequestBody picture, @Part("description") RequestBody description);
 }

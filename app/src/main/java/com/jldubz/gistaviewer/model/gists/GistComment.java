@@ -1,9 +1,12 @@
 package com.jldubz.gistaviewer.model.gists;
 
+import androidx.annotation.Keep;
+
 import com.jldubz.gistaviewer.model.GitHubUser;
 
 import java.util.Date;
 
+@Keep
 public class GistComment {
 
     /*

@@ -1,5 +1,8 @@
 package com.jldubz.gistaviewer.model.gists;
 
+import androidx.annotation.Keep;
+
+@Keep
 public class GistFile {
     /*
     Modified sample data from: https://developer.github.com/v3/gists/#list-a-users-gists
