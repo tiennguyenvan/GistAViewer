@@ -98,7 +98,7 @@ public class GistFragment extends Fragment implements GistAdapter.IGistListListe
      * @param gists the new list of Gists
      */
     protected void onGistsChanged(List<Gist> gists) {
-        if (gists.size() == 0) {
+        if (gists == null || gists.isEmpty()) {
             mEmptyListView.setVisibility(View.VISIBLE);
             mGistList.setVisibility(View.GONE);
         }

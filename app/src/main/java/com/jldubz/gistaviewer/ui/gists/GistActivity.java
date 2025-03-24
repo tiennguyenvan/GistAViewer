@@ -130,10 +130,12 @@ public class GistActivity extends AppCompatActivity {
         // is only enabled when there is text in the field
         mCommentInput.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) { }
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
 
             @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) { }
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
 
             @Override
             public void afterTextChanged(Editable editable) {
@@ -153,8 +155,7 @@ public class GistActivity extends AppCompatActivity {
         String gistId = sourceIntent.getStringExtra(KEY_GIST_ID);
         if (gistId.isEmpty()) {
             onErrorChanged(Constants.INVALID_GIST_ID_ERROR);
-        }
-        else {
+        } else {
             mViewModel.setGistId(gistId);
         }
 
@@ -181,17 +182,17 @@ public class GistActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
-        switch (item.getItemId()) {
-            case R.id.menu_gist_star:
-                mViewModel.starItemClicked();
-                return true;
-            default:
-                return false;
+        if (item.getItemId() == R.id.menu_gist_star) {
+            mViewModel.starItemClicked();
+            return true;
         }
+        return false;
+
     }
 
     /**
      * Called when the user clicks the button to create a new comment
+     *
      * @param view the View that was clicked
      */
     private void onCreateCommentButtonClick(View view) {
@@ -231,6 +232,7 @@ public class GistActivity extends AppCompatActivity {
 
     /**
      * Called when the Gist data was updated to update the UI
+     *
      * @param gist the new Gist data
      */
     private void onGistChanged(Gist gist) {
@@ -242,8 +244,7 @@ public class GistActivity extends AppCompatActivity {
             mFirstFilenameText.setText(firstFile.getFilename());
             //Set the number of files in the Gist
             mFileCountText.setText(String.valueOf(gistFiles.size()));
-        }
-        else {
+        } else {
             mFirstFilenameText.setText("ERROR - NO FILES");
             mFileCountText.setText("0");
         }
@@ -265,8 +266,7 @@ public class GistActivity extends AppCompatActivity {
                     .into(mAuthorAvatarImage);
             //Set the login name of the author of the Gist
             mAuthorNameText.setText(owner.getLogin());
-        }
-        else {
+        } else {
             mAuthorNameText.setText("ERROR - NO USER");
         }
 
@@ -274,6 +274,7 @@ public class GistActivity extends AppCompatActivity {
 
     /**
      * Called when the list of Comments has been updated to update the UI
+     *
      * @param comments the new list of comments
      */
     private void onCommentsChanged(List<GistComment> comments) {
@@ -292,6 +293,7 @@ public class GistActivity extends AppCompatActivity {
 
     /**
      * Called when the state of the star on the Gist has been updated to update the UI
+     *
      * @param isStarred TRUE if the star should be filled, FALSE if it should be an outline
      */
     private void onStarStateChanged(Boolean isStarred) {
@@ -308,6 +310,7 @@ public class GistActivity extends AppCompatActivity {
 
     /**
      * Called when a new error message is needs to be displayed to the user
+     *
      * @param message the error message to diaplsy
      */
     private void onErrorChanged(String message) {

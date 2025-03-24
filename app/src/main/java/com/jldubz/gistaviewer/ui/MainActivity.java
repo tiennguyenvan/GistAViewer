@@ -19,7 +19,7 @@ import androidx.lifecycle.ViewModelProviders;
 
 /**
  * Used to host a bottom navigation bar for a DiscoverGistsFragment, StarGistsFragment, YourGistsFragment,
- *  and ProfileFragment
+ * and ProfileFragment
  *
  * @author Jon-Luke West
  */
@@ -33,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private YourGistsFragment mYourGistsFragment;
     private ProfileFragment mProfileFragment;
 
-    private int mSelectedTabId = R.id.nav_gist_discover;
+    private int mSelectedTabId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
             viewModel.logIn(username, token);
         }
 
+        mSelectedTabId = R.id.nav_gist_discover;
+
         //Resume from the last tab that was open
         if (savedInstanceState != null) {
             mSelectedTabId = savedInstanceState.getInt(KEY_SELECTED_TAB_ID);
@@ -67,27 +69,29 @@ public class MainActivity extends AppCompatActivity {
             //Log.d("Gist", "tab selected " + item.getTitle());
             FragmentManager fragmentManager = getSupportFragmentManager();
             FragmentTransaction fragmentTransaction;
-            switch (itemId) {
-                case R.id.nav_gist_discover:
-                    fragmentTransaction = fragmentManager.beginTransaction();
-                    fragmentTransaction.replace(R.id.content, mDiscoverGistsFragment);
-                    fragmentTransaction.commit();
-                    return true;
-                case R.id.nav_gist_star:
-                    fragmentTransaction = fragmentManager.beginTransaction();
-                    fragmentTransaction.replace(R.id.content, mStarGistsFragment);
-                    fragmentTransaction.commit();
-                    return true;
-                case R.id.nav_gist_your:
-                    fragmentTransaction = fragmentManager.beginTransaction();
-                    fragmentTransaction.replace(R.id.content, mYourGistsFragment);
-                    fragmentTransaction.commit();
-                    return true;
-                case R.id.nav_profile:
-                    fragmentTransaction = fragmentManager.beginTransaction();
-                    fragmentTransaction.replace(R.id.content, mProfileFragment);
-                    fragmentTransaction.commit();
-                    return true;
+            if (itemId == R.id.nav_gist_discover) {
+                fragmentTransaction = fragmentManager.beginTransaction();
+                fragmentTransaction.replace(R.id.content, mDiscoverGistsFragment);
+                fragmentTransaction.commit();
+                return true;
+            }
+            if (itemId == R.id.nav_gist_star) {
+                fragmentTransaction = fragmentManager.beginTransaction();
+                fragmentTransaction.replace(R.id.content, mStarGistsFragment);
+                fragmentTransaction.commit();
+                return true;
+            }
+            if (itemId == R.id.nav_gist_your) {
+                fragmentTransaction = fragmentManager.beginTransaction();
+                fragmentTransaction.replace(R.id.content, mYourGistsFragment);
+                fragmentTransaction.commit();
+                return true;
+            }
+            if (itemId == R.id.nav_profile) {
+                fragmentTransaction = fragmentManager.beginTransaction();
+                fragmentTransaction.replace(R.id.content, mProfileFragment);
+                fragmentTransaction.commit();
+                return true;
             }
             return false;
         });

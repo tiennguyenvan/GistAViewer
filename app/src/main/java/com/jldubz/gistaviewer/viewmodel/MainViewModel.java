@@ -2,20 +2,26 @@ package com.jldubz.gistaviewer.viewmodel;
 
 import android.view.View;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.jldubz.gistaviewer.model.Constants;
 import com.jldubz.gistaviewer.model.NetworkUtil;
+import com.jldubz.gistaviewer.model.data.BasicAuthInterceptor;
 import com.jldubz.gistaviewer.model.data.IGitHubService;
 import com.jldubz.gistaviewer.model.gists.Gist;
 import com.jldubz.gistaviewer.model.GitHubUser;
 
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import okhttp3.OkHttpClient;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -87,7 +93,8 @@ public class MainViewModel extends ViewModel {
      * Configure a new Retrofit instance for future API calls with no authorization
      */
     private void initAnonService() {
-        Retrofit retrofit = new Retrofit.Builder().baseUrl(Constants.URL_GITHUB).addConverterFactory(GsonConverterFactory.create()).build();
+        Gson gson = new GsonBuilder().setDateFormat("YYYY-MM-dd'T'HH:mm:ss").create();
+        Retrofit retrofit = new Retrofit.Builder().baseUrl(Constants.URL_GITHUB).addConverterFactory(GsonConverterFactory.create(gson)).build();
 
         mGitHubService = retrofit.create(IGitHubService.class);
     }
@@ -133,10 +140,17 @@ public class MainViewModel extends ViewModel {
 
         byte[] authBytes = (username + ":" + token).getBytes();
         String auth = android.util.Base64.encodeToString(authBytes, android.util.Base64.NO_WRAP);
-        mGitHubService.getLoggedInUser(auth).enqueue(new Callback<GitHubUser>() {
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(new BasicAuthInterceptor(username.trim(), token.trim())).build();
+        Retrofit retrofit = new Retrofit.Builder().baseUrl(Constants.URL_GITHUB).addConverterFactory(GsonConverterFactory.create())
+                .client(client)
+                .build();
+        mGitHubService = retrofit.create(IGitHubService.class);
+
+        mGitHubService.getLoggedInUser().enqueue(new Callback<GitHubUser>() {
             @Override
             public void onResponse(Call<GitHubUser> call, Response<GitHubUser> response) {
                 if (!response.isSuccessful()) {
+                    initAnonService();
                     showError(NetworkUtil.onGitHubResponseError(response));
                     return;
                 }
@@ -200,7 +214,11 @@ public class MainViewModel extends ViewModel {
      * Download public Gists that have been recently created or updated on GitHub
      */
     public void discoverMoreGists() {
-        mGitHubService.getPublicGists(mGistPagesLoaded+1).enqueue(new Callback<List<Gist>>() {
+        Map<String, Object> queries = new HashMap<>();
+        queries.put("page", mGistPagesLoaded+1);
+        queries.put("per_page", 15);
+
+        mGitHubService.getPublicGists(queries).enqueue(new Callback<List<Gist>>() {
             @Override
             public void onResponse(Call<List<Gist>> call, Response<List<Gist>> response) {
                 if (!response.isSuccessful()) {

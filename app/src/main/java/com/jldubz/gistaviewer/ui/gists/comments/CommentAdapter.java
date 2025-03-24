@@ -39,12 +39,10 @@ public class CommentAdapter extends RecyclerView.Adapter {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(viewType, parent, false);
 
-        switch (viewType) {
-            case R.layout.item_comment:
-                return new CommentViewHolder(view);
-            default:
-                return new LoadMoreViewHolder(view);
+        if (viewType == R.layout.item_comment) {
+            return new CommentViewHolder(view);
         }
+        return new LoadMoreViewHolder(view);
 
     }
 
@@ -94,18 +92,15 @@ public class CommentAdapter extends RecyclerView.Adapter {
         if (oldSize <= 0) {
             //When the size of the old list was 0, refresh the whole list
             notifyDataSetChanged();
-        }
-        else if (newSize == oldSize + 1) {
+        } else if (newSize == oldSize + 1) {
             //When the size of the new list is greater than the old one by one,
             // insert the new item at the top
             notifyItemInserted(0);
             return true;
-        }
-        else if (newSize > oldSize + 1) {
+        } else if (newSize > oldSize + 1) {
             //When the size of the new list is greater than the old one, insert all new items
             notifyItemRangeInserted(oldSize, newSize - oldSize);
-        }
-        else {
+        } else {
             notifyDataSetChanged();
         }
 

@@ -38,13 +38,11 @@ public class GistAdapter extends RecyclerView.Adapter implements GistViewHolder.
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         View view = LayoutInflater.from(parent.getContext())
                 .inflate(viewType, parent, false);
-        switch (viewType) {
-            case R.layout.item_gist:
-                return new GistViewHolder(view, this);
-            default:
-                return new LoadMoreViewHolder(view);
+        if (viewType == R.layout.item_gist) {
+            return new GistViewHolder(view, this);
         }
 
+        return new LoadMoreViewHolder(view);
     }
 
     @Override
@@ -91,12 +89,10 @@ public class GistAdapter extends RecyclerView.Adapter implements GistViewHolder.
         if (oldSize <= 0) {
             //When the size of the old list was 0, refresh the whole list
             notifyDataSetChanged();
-        }
-        else if (newSize > oldSize) {
+        } else if (newSize > oldSize) {
             //When the size of the new list is greater than the old one, insert all new items
             notifyItemRangeInserted(oldSize, newSize - oldSize);
-        }
-        else {
+        } else {
             notifyDataSetChanged();
         }
     }

@@ -4,6 +4,7 @@ import android.view.View;
 
 import com.jldubz.gistaviewer.model.Constants;
 import com.jldubz.gistaviewer.model.NetworkUtil;
+import com.jldubz.gistaviewer.model.data.BasicAuthInterceptor;
 import com.jldubz.gistaviewer.model.data.IGitHubService;
 import com.jldubz.gistaviewer.model.gists.Gist;
 import com.jldubz.gistaviewer.model.gists.GistComment;
@@ -16,6 +17,7 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import okhttp3.OkHttpClient;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -75,9 +77,10 @@ public class GistViewModel extends ViewModel {
 
     /**
      * Set the credentials to use for authorization when communicating with the GitHub API for
-     *  this Gist.  The Retrofit service instance will be rebuild using these credentials.
+     * this Gist.  The Retrofit service instance will be rebuild using these credentials.
+     *
      * @param username the GitHub username used for authorization
-     * @param token the private access token associated with the GitHub user
+     * @param token    the private access token associated with the GitHub user
      */
     public void setCredentials(String username, String token) {
 
@@ -90,6 +93,11 @@ public class GistViewModel extends ViewModel {
         mUsername = username;
         mToken = token;
 
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(new BasicAuthInterceptor(mUsername, mToken)).build();
+        Retrofit retrofit = new Retrofit.Builder().baseUrl(Constants.URL_GITHUB).addConverterFactory(GsonConverterFactory.create())
+                .client(client)
+                .build();
+        mGitHubService = retrofit.create(IGitHubService.class);
 
     }
 
@@ -105,6 +113,7 @@ public class GistViewModel extends ViewModel {
 
     /**
      * Set the ID of the Gist to use
+     *
      * @param mGistId the ID of the Gist
      */
     public void setGistId(String mGistId) {
@@ -113,7 +122,8 @@ public class GistViewModel extends ViewModel {
 
     /**
      * Get an observable instance of the Gist.  This will also load the Gist from the API
-     *  if one has not been loaded yet.
+     * if one has not been loaded yet.
+     *
      * @return an observable Gist
      * @see LiveData
      */
@@ -174,7 +184,7 @@ public class GistViewModel extends ViewModel {
 
     /**
      * Called to indicate that the user has clicked the star on the Gist in an attempt to either
-     *  add or remove it from their list of starred Gists.
+     * add or remove it from their list of starred Gists.
      */
     public void starItemClicked() {
         //Make sure that the state of the star has been initialized
@@ -189,8 +199,7 @@ public class GistViewModel extends ViewModel {
         //Perform the appropriate action based on the state of the star
         if (mIsGistStarred.getValue()) {
             unStarGist();
-        }
-        else {
+        } else {
             starGist();
         }
     }
@@ -205,12 +214,31 @@ public class GistViewModel extends ViewModel {
             return;
         }
 
+        mGitHubService.getStarGistById(mGistId).enqueue(new Callback<Response>() {
+            @Override
+            public void onResponse(Call<Response> call, Response<Response> response) {
+                if (response.code() == 404) {
+                    mIsGistStarred.postValue(false);
+                    return;
+                }
+                else if (response.code() == 204) {
+                    mIsGistStarred.postValue(true);
+                    return;
+                }
 
+                showError(NetworkUtil.onGitHubResponseError(response));
+            }
+
+            @Override
+            public void onFailure(Call<Response> call, Throwable t) {
+                showError(t.getLocalizedMessage());
+            }
+        });
     }
 
     /**
      * Add a star to the Gist so that it shows up in the authorized user's list
-     *  of starred Gists.
+     * of starred Gists.
      */
     private void starGist() {
 
@@ -219,12 +247,30 @@ public class GistViewModel extends ViewModel {
             return;
         }
 
+        mGitHubService.starGistById(mGistId).enqueue(new Callback<Response>() {
+            @Override
+            public void onResponse(Call<Response> call, Response<Response> response) {
+                if (response.code() == 204) {
+                    mIsGistStarred.postValue(true);
+                    return;
+                }
+
+                showError(NetworkUtil.onGitHubResponseError(response));
+
+            }
+
+            @Override
+            public void onFailure(Call<Response> call, Throwable t) {
+                showError(t.getLocalizedMessage());
+            }
+        });
+
 
     }
 
     /**
      * Remove a star from the Gist so that it no longer shows up in the authorized user's list
-     *  of starred Gists.
+     * of starred Gists.
      */
     private void unStarGist() {
 
@@ -233,6 +279,24 @@ public class GistViewModel extends ViewModel {
             return;
         }
 
+        mGitHubService.unstarGistById(mGistId).enqueue(new Callback<Response>() {
+            @Override
+            public void onResponse(Call<Response> call, Response<Response> response) {
+                if (response.code() == 204) {
+                    mIsGistStarred.postValue(false);
+                    return;
+                }
+
+                showError(NetworkUtil.onGitHubResponseError(response));
+
+            }
+
+            @Override
+            public void onFailure(Call<Response> call, Throwable t) {
+                showError(t.getLocalizedMessage());
+            }
+        });
+
 
     }
 
@@ -240,7 +304,9 @@ public class GistViewModel extends ViewModel {
 
     //region Comments
 
-    public LiveData<List<GistComment>> getComments() { return mComments; }
+    public LiveData<List<GistComment>> getComments() {
+        return mComments;
+    }
 
     /**
      * Download comments for the gist from the GitHub API
@@ -253,7 +319,7 @@ public class GistViewModel extends ViewModel {
         }
 
         //Make sure that there are more comments to load (last -> first)
-        if (mGistCommentPrevPage == 0){
+        if (mGistCommentPrevPage == 0) {
             return;
         }
 
@@ -292,6 +358,7 @@ public class GistViewModel extends ViewModel {
 
     /**
      * Determine if there are more pages that can be loaded for comments
+     *
      * @return TRUE if more pages can be loaded, FALSE if not
      */
     public boolean isMoreCommentsAvailable() {
@@ -300,7 +367,8 @@ public class GistViewModel extends ViewModel {
 
     /**
      * Add a comment to the Gist as the authorized user.  The API will error if there is no
-     *  authorized user
+     * authorized user
+     *
      * @param comment the comment to post
      */
     public void createComment(String comment) {
@@ -316,13 +384,39 @@ public class GistViewModel extends ViewModel {
             return;
         }
 
+        GistComment newComment = new GistComment();
+        newComment.setBody(comment);
+
+        mGitHubService.createCommentOnGist(mGistId, newComment).enqueue(new Callback<GistComment>() {
+            @Override
+            public void onResponse(Call<GistComment> call, Response<GistComment> response) {
+                if (!response.isSuccessful()) {
+                    showError(NetworkUtil.onGitHubResponseError(response));
+                    return;
+                }
+
+                List<GistComment> currentList = mComments.getValue();
+                if (currentList == null) {
+                    currentList = new ArrayList<>();
+                }
+                List<GistComment> comments = new ArrayList<>();
+                comments.add(0, response.body());
+                mComments.postValue(comments);
+
+            }
+
+            @Override
+            public void onFailure(Call<GistComment> call, Throwable t) {
+                showError(t.getLocalizedMessage());
+            }
+        });
 
 
     }
 
     /**
      * Download the headers for the comment API call to determine how many pages there are to load.
-     *  Comments cannot be loaded until this is executed first.
+     * Comments cannot be loaded until this is executed first.
      */
     private void loadCommentPageCount() {
         //Make sure there is a Gist ID stored for use
@@ -344,8 +438,7 @@ public class GistViewModel extends ViewModel {
                 String linkedHeader = response.headers().get("Link");
                 if (linkedHeader != null) {
                     mGistCommentPrevPage = getLastPageNum(linkedHeader);
-                }
-                else {
+                } else {
                     mGistCommentPrevPage = 0;
                 }
                 loadMoreComments();
@@ -363,7 +456,7 @@ public class GistViewModel extends ViewModel {
 
     /**
      * Check a link header returned in a call to the GitHub API to see if there is a URL pointing to the last page of content
-     *  and then get the number of pages from it
+     * and then get the number of pages from it
      *
      * @param linkHeader the Link header returned by the call to the GitHub API
      * @return the number of pages in the list of data
@@ -374,17 +467,15 @@ public class GistViewModel extends ViewModel {
         if (lastLinkIndex >= 0) {
             //grab the page number for the "last" link
             int lastPageNumberIndex = linkHeader.lastIndexOf("page=");
-            String lastPageNum = linkHeader.substring(lastPageNumberIndex+5, linkHeader.indexOf(">", lastPageNumberIndex));
+            String lastPageNum = linkHeader.substring(lastPageNumberIndex + 5, linkHeader.indexOf(">", lastPageNumberIndex));
             try {
                 return Integer.parseInt(lastPageNum);
-            }
-            catch (NumberFormatException exception) {
+            } catch (NumberFormatException exception) {
                 showError("Couldn't load comments.  Please try again.");
                 return 0;
             }
 
-        }
-        else {
+        } else {
             return 0;
         }
     }
